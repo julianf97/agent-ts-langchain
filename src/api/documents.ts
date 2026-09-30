@@ -1,4 +1,6 @@
 import type { DocumentsResponse } from '../interfaces/documents-response.interface.js';
+import { validateApiBaseUrl } from '../validators/api-config.validator.js';
+import { validateHttpResponse } from '../validators/http-response.validator.js';
 
 export async function listDocuments(
   token: string,
@@ -6,9 +8,7 @@ export async function listDocuments(
 ): Promise<DocumentsResponse> {
   const baseUrl = process.env.API_BASE_URL;
 
-  if (!baseUrl) {
-    throw new Error('Falta configurar API_BASE_URL en .env');
-  }
+  validateApiBaseUrl(baseUrl);
 
   const response = await fetch(
     `${baseUrl}/documents?page=${page}&limit=100`,
@@ -19,11 +19,7 @@ export async function listDocuments(
     },
   );
 
-  if (!response.ok) {
-    throw new Error(
-      `No se pudieron consultar documentos: HTTP ${response.status}`,
-    );
-  }
+  validateHttpResponse(response, 'No se pudieron consultar documentos');
 
   const data: DocumentsResponse = await response.json();
 

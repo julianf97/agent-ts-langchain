@@ -1,12 +1,12 @@
 import 'dotenv/config';
 import type { LoginResponse } from '../interfaces/login-response.interface.js';
+import { validateApiAuthConfig } from '../validators/api-config.validator.js';
+import { validateHttpResponse } from '../validators/http-response.validator.js';
 
 export async function login(): Promise<string> {
   const { API_BASE_URL, API_EMAIL, API_PASSWORD } = process.env;
 
-  if (!API_BASE_URL || !API_EMAIL || !API_PASSWORD) {
-    throw new Error('Falta configurar la conexión con api-agente en .env');
-  }
+  validateApiAuthConfig(API_BASE_URL, API_EMAIL, API_PASSWORD);
 
   const response = await fetch(`${API_BASE_URL}/auth/login`, {
     method: 'POST',
@@ -19,9 +19,7 @@ export async function login(): Promise<string> {
     }),
   });
 
-  if (!response.ok) {
-    throw new Error(`No se pudo iniciar sesión: HTTP ${response.status}`);
-  }
+  validateHttpResponse(response, 'No se pudo iniciar sesión');
 
   const data: LoginResponse = await response.json();
 
