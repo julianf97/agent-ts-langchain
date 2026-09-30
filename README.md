@@ -4,14 +4,15 @@ Agente de facturación desarrollado con TypeScript, LangChain y OpenAI. Consulta
 
 ## Qué hace el agente
 
-1. Inicia sesión en la API como usuario regular y obtiene un token JWT.
-2. Consulta los documentos paginados y lee el contexto y las reglas de negocio que devuelve la API.
-3. Selecciona órdenes de venta con `type: OV` y `status: pending`.
-4. Solicita una factura por orden, enviando únicamente `number` y `documentId`. Usa el número `DEMO-FAC-OV-{documentId}`.
-5. La API calcula los datos fiscales y el importe, crea la factura y marca la orden como `invoiced`.
-6. Imprime las llamadas a herramientas y un resumen en español con las facturas creadas.
+1. Espera el horario configurado mediante `node-cron`.
+2. Inicia sesión en la API como usuario regular y obtiene un token JWT.
+3. Consulta los documentos paginados y lee el contexto y las reglas de negocio que devuelve la API.
+4. Selecciona órdenes de venta con `type: OV` y `status: pending`.
+5. Solicita una factura por orden, enviando únicamente `number` y `documentId`. Usa el número `DEMO-FAC-OV-{documentId}`.
+6. La API calcula los datos fiscales y el importe, crea la factura y marca la orden como `invoiced`.
+7. Imprime las llamadas a herramientas y un resumen en español con las facturas creadas.
 
-Cada ejecución procesa un lote del tamaño configurado. Actualmente no hay un cron ni una programación automática. El agente opera mediante HTTP; no se conecta directamente a PostgreSQL.
+El agente ejecuta automáticamente un lote según `BILLING_CRON`. `BILLING_BATCH_SIZE` define cuántas facturas solicita por ejecución. En cada lote inicia sesión y crea una nueva instancia del agente. Opera mediante HTTP; no se conecta directamente a PostgreSQL.
 
 ## Inicio rápido
 
@@ -35,7 +36,7 @@ Ejecutá los siguientes pasos desde la carpeta `agent-ts-langchain`.
 
 ### 3. Configurar las variables de entorno
 
-Creá un archivo `.env` en la raíz del proyecto y pegá estas seis variables:
+Creá un archivo `.env` en la raíz del proyecto y pegá estas ocho variables:
 
 ```env
 OPENAI_API_KEY=tu_api_key_de_openai
@@ -44,6 +45,8 @@ API_BASE_URL=http://localhost:3000
 API_EMAIL=regular@example.com
 API_PASSWORD=RegularDemo123!
 BILLING_BATCH_SIZE=5
+BILLING_CRON=53 14 * * *
+BILLING_TIMEZONE=America/Argentina/Buenos_Aires
 ```
 
 Reemplazá `OPENAI_API_KEY` por **tu propia API key de OpenAI** y `OPENAI_MODEL` por el identificador del modelo que vas a utilizar. Debe admitir llamadas a herramientas y estar disponible para tu cuenta. Las llamadas consumen el saldo o la facturación de tu cuenta de la API de OpenAI.
@@ -58,6 +61,8 @@ Elegí `BILLING_BATCH_SIZE` según cuántas facturas querés solicitar por ejecu
 BILLING_BATCH_SIZE=10
 ```
 
+Configurá `BILLING_CRON` con el horario deseado. El ejemplo `53 14 * * *` ejecuta un lote **todos los días a las 14:53, hora argentina**, según `BILLING_TIMEZONE`. Cambiá la hora y los minutos para elegir otro horario.
+
 No subas `.env` al repositorio. El agente obtiene su token iniciando sesión en la API; no necesita `JWT_SECRET` ni las credenciales de PostgreSQL.
 
 ### 4. Compilar y ejecutar
@@ -69,19 +74,19 @@ npm run build
 npm start
 ```
 
-El agente inicia sesión, consulta las órdenes pendientes y solicita las facturas del lote. En la terminal vas a ver las llamadas a herramientas y el resumen de la ejecución.
+La terminal muestra el cron y la zona horaria configurados. El proceso queda esperando la próxima ejecución; **no crea un lote inmediatamente al arrancar**.
+
+Dejá la terminal abierta, la computadora encendida y la API disponible. Iniciá el proceso antes del horario elegido: si lo arrancás después de las 14:53 con la configuración del ejemplo, ejecutará el primer lote al día siguiente.
+
+Al llegar el horario, inicia sesión, consulta las órdenes pendientes y solicita las facturas. En la terminal vas a ver las llamadas a herramientas y el resumen. Para detenerlo, usá `Ctrl+C`.
 
 ### 5. Comprobar las facturas creadas
 
-Desde Swagger de `api-agente`, iniciá sesión con el usuario regular y autorizá las solicitudes con el token obtenido.
+Después de una ejecución programada, desde Swagger de `api-agente`, iniciá sesión con el usuario regular y autorizá las solicitudes con el token obtenido.
 
 Consultá `GET /invoices` para ver las facturas creadas y `GET /documents` para comprobar que las órdenes procesadas tienen estado `invoiced`.
 
-Para ejecutar otro lote:
-
-```powershell
-npm start
-```
+El siguiente lote se ejecuta automáticamente en el próximo horario del cron. Reiniciar el proceso vuelve a programar la tarea; no ejecuta un lote de inmediato.
 
 Las órdenes ya facturadas no vuelven a ser elegibles. Para completar otro lote deben quedar suficientes OV pendientes.
 
@@ -97,6 +102,31 @@ Las órdenes ya facturadas no vuelven a ser elegibles. Para completar otro lote 
 | `API_EMAIL` | Email del usuario regular de la demo: `regular@example.com`. |
 | `API_PASSWORD` | Contraseña inicial: `RegularDemo123!`. Si la cambiaste, usá la actual. |
 | `BILLING_BATCH_SIZE` | Cantidad de facturas solicitadas por ejecución; entero mayor que cero. |
+| `BILLING_CRON` | Expresión cron que define cuándo ejecutar cada lote. Por defecto: `*/5 * * * *`. |
+| `BILLING_TIMEZONE` | Zona horaria para interpretar el cron. Por defecto: `America/Argentina/Buenos_Aires`. |
+
+### Programación del cron
+
+| `BILLING_CRON` | Frecuencia |
+| --- | --- |
+| `00 16 * * *` | Todos los días a las 16:00. | 
+| `0 9 * * *` | Todos los días a las 9:00. |
+| `* * * * *` | Cada minuto, al comenzar el minuto. |
+| `*/5 * * * *` | Cada cinco minutos. |
+| `0 * * * *` | Cada hora, en el minuto 00. |
+
+Para probar sin esperar al horario diario, configurá temporalmente:
+
+```env
+BILLING_CRON=* * * * *
+BILLING_BATCH_SIZE=2
+```
+
+Guardá `.env` y reiniciá el proceso con `Ctrl+C` y `npm start`. Esperá el próximo cambio de minuto y comprobá las facturas desde Swagger. Después restaurá la frecuencia deseada y reiniciá nuevamente.
+
+`noOverlap: true` evita iniciar otro lote si el anterior sigue en ejecución dentro del mismo proceso; ese horario se omite. Ejecutá una sola instancia para la demo, porque esta opción no coordina procesos distintos.
+
+Si un lote lanza un error, se registra en la terminal y el proceso sigue esperando la próxima ejecución. Cada ejecución realiza nuevas llamadas a OpenAI.
 
 ### API en otra computadora
 
@@ -125,7 +155,7 @@ Las reglas fiscales y la prevención de facturas duplicadas por orden se aplican
 npm run dev
 ```
 
-Usa `tsx watch` y vuelve a ejecutar el agente cuando cambia el código. Cada nueva ejecución puede crear otro lote de facturas en la base de demo.
+Usa `tsx watch` y reinicia el proceso cuando cambia el código fuente. Cada reinicio vuelve a programar el cron y espera el próximo horario; no crea un lote inmediatamente. Después de cambiar `.env`, reiniciá el proceso para cargar los nuevos valores.
 
 ```powershell
 npm run build
