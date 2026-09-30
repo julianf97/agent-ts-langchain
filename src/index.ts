@@ -1,41 +1,38 @@
 import 'dotenv/config';
-import { login } from './api/auth.js';
-import { createBillingAgent } from './agents/billing.agent.js';
-import { BILLING_BATCH_SIZE } from './config/billing.js';
+import cron from 'node-cron';
+import {
+  BILLING_CRON,
+  BILLING_TIMEZONE,
+} from './config/cron.js';
+import { runBillingJob } from './jobs/billing.job.js';
 
-async function main(): Promise<void> {
-  const token = await login();
-  const agent = createBillingAgent(token);
+cron.schedule(
+  BILLING_CRON,
+  async () => {
+    console.log(
+      `[${new Date().toISOString()}] Iniciando lote de facturación...`,
+    );
 
-  const result = await agent.invoke(
-    {
-      messages: [
-        {
-          role: 'user',
-          content:
-            `Consultá los documentos y creá ${BILLING_BATCH_SIZE} facturas ` +
-            'desde OV pendientes diferentes. Completá el lote automáticamente, ' +
-            'sin pedirme confirmación. Si no hay suficientes órdenes elegibles ' +
-            'o una creación falla, informá el motivo y la cantidad creada.',
-        },
-      ],
-    },
-    {
-      recursionLimit: 20 + BILLING_BATCH_SIZE * 4,
-    },
-  );
+    try {
+      await runBillingJob();
 
-  for (const message of result.messages) {
-    if ('tool_calls' in message) {
-      console.dir(message.tool_calls, { depth: null });
+      console.log(
+        `[${new Date().toISOString()}] Ejecución finalizada.`,
+      );
+    } catch (error: unknown) {
+      console.error(
+        `[${new Date().toISOString()}] Error en la ejecución:`,
+        error instanceof Error ? error.message : error,
+      );
     }
-  }
+  },
+  {
+    timezone: BILLING_TIMEZONE,
+    noOverlap: true,
+  },
+);
 
-  console.log('Resultado del agente:');
-  console.dir(result.messages.at(-1)?.content, { depth: null });
-}
-
-main().catch((error: unknown) => {
-  console.error(error instanceof Error ? error.message : error);
-  process.exitCode = 1;
-});
+console.log('Agente de facturación programado.');
+console.log(`Cron: ${BILLING_CRON}`);
+console.log(`Zona horaria: ${BILLING_TIMEZONE}`);
+console.log('Esperando la próxima ejecución. Para detenerlo, usá Ctrl+C.');
