@@ -1,0 +1,16 @@
+services:
+  agent:
+    build: .
+    restart: unless-stopped
+    init: true
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      API_BASE_URL: http://api-agente:3000
+    networks:
+      - erp
+
+networks:
+  erp:
+    external: true
+    name: erp-agent-network
