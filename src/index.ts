@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { login } from './api/auth.js';
 import { createBillingAgent } from './agents/billing.agent.js';
+import { BILLING_BATCH_SIZE } from './config/billing.js';
 
 async function main(): Promise<void> {
   const token = await login();
@@ -12,12 +13,12 @@ async function main(): Promise<void> {
         {
           role: 'user',
           content:
-            'Consultá los documentos y facturá como máximo una OV pendiente.',
+            `Consultá los documentos y procesá hasta ${BILLING_BATCH_SIZE} OV pendientes.`,
         },
       ],
     },
     {
-      recursionLimit: 20,
+      recursionLimit: 20 + BILLING_BATCH_SIZE * 4,
     },
   );
 
