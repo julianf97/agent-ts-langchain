@@ -1,5 +1,19 @@
 # agent-ts-langchain
 
+Agente de facturación desarrollado con TypeScript, LangChain y OpenAI para automatizar acciones sobre el ERP de demostración [api-agente](https://github.com/julianf97/api-agente). Opera mediante endpoints HTTP, sin conectarse directamente a PostgreSQL.
+
+## Qué hace el agente
+
+- Se ejecuta automáticamente en el horario y la zona horaria configurados mediante cron, sin que tengas que enviarle una solicitud en cada ejecución.
+- Inicia sesión en la API con el usuario regular configurado.
+- Consulta los documentos por páginas y lee el contexto y las reglas de negocio que devuelve la API.
+- Selecciona únicamente órdenes de venta (`OV`) con estado `pending`.
+- Crea las facturas una por una, con el objetivo de completar la cantidad configurada en `BILLING_BATCH_SIZE`. Usa el número `DEMO-FAC-OV-{documentId}` para cada factura.
+- Delega en la API el cálculo de los datos de facturación y el cambio de la orden a `invoiced`. La API impide generar más de una factura para la misma orden.
+- Muestra en los logs las llamadas a herramientas y un resumen de las facturas creadas. Si no hay suficientes órdenes elegibles o falla una creación, informa el motivo y la cantidad creada.
+
+**Al arrancar, espera el próximo horario del cron.** Cada ejecución procesa un lote; las órdenes pendientes restantes quedan disponibles para las siguientes ejecuciones.
+
 ## Levantar con Docker
 
 Necesitás Git y Docker Desktop iniciado (o Docker Engine con Docker Compose), y una API key de OpenAI con saldo disponible. Ambos repositorios deben ejecutarse en el mismo Docker Engine.
