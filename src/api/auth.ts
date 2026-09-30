@@ -1,10 +1,5 @@
 import 'dotenv/config';
-
-interface LoginResponse {
-  accessToken: string;
-  tokenType: string;
-  expiresIn: number;
-}
+import type { LoginResponse } from '../interfaces/login-response.interface.js';
 
 export async function login(): Promise<string> {
   const { API_BASE_URL, API_EMAIL, API_PASSWORD } = process.env;
@@ -13,7 +8,7 @@ export async function login(): Promise<string> {
     throw new Error('Falta configurar la conexión con api-agente en .env');
   }
 
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+  const response = await fetch(`${API_BASE_URL}/auth/login`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
