@@ -13,7 +13,10 @@ async function main(): Promise<void> {
         {
           role: 'user',
           content:
-            `Consultá los documentos y procesá hasta ${BILLING_BATCH_SIZE} OV pendientes.`,
+            `Consultá los documentos y creá ${BILLING_BATCH_SIZE} facturas ` +
+            'desde OV pendientes diferentes. Completá el lote automáticamente, ' +
+            'sin pedirme confirmación. Si no hay suficientes órdenes elegibles ' +
+            'o una creación falla, informá el motivo y la cantidad creada.',
         },
       ],
     },
