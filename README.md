@@ -4,17 +4,7 @@
 
 Necesitás Git y Docker Desktop iniciado (o Docker Engine con Docker Compose), y una API key de OpenAI con saldo disponible. Ambos repositorios deben ejecutarse en el mismo Docker Engine.
 
-### 1. Crear la red compartida
-
-Ejecutá una sola vez:
-
-```powershell
-docker network create erp-agent-network
-```
-
-Si Docker informa que la red ya existe, continuá.
-
-### 2. Levantar la API
+### 1. Levantar la API
 
 Primero configurá y levantá [api-agente](https://github.com/julianf97/api-agente) siguiendo su README. Si ya lo tenés clonado, ejecutá desde su carpeta:
 
@@ -24,9 +14,11 @@ docker compose up -d --build
 docker compose logs -f api
 ```
 
+Al levantar `api-agente`, Docker Compose crea automáticamente la red compartida `erp-agent-network`. El agente está configurado para conectarse a esa red existente; no necesitás crearla manualmente.
+
 Esperá a que terminen las migraciones, el seed y el arranque. Comprobá [Swagger](http://localhost:3000/api-docs); si cambiaste `HOST_PORT`, usá ese puerto. Con `Ctrl+C` salís de los logs sin detener los contenedores.
 
-### 3. Clonar el agente
+### 2. Clonar el agente
 
 ```powershell
 git clone https://github.com/julianf97/agent-ts-langchain.git
@@ -35,7 +27,7 @@ cd agent-ts-langchain
 
 Si ya lo tenés clonado, ejecutá `git pull origin main` desde su carpeta. Todos los comandos siguientes se ejecutan dentro de `agent-ts-langchain`.
 
-### 4. Configurar el entorno
+### 3. Configurar el entorno
 
 Si todavía no tenés `.env`, crealo:
 
@@ -68,7 +60,9 @@ Compose establece automáticamente `API_BASE_URL=http://api-agente:3000` dentro 
 
 No subas `.env` al repositorio.
 
-### 5. Levantar el agente
+### 4. Levantar el agente
+
+Con `api-agente` ya levantado y la red `erp-agent-network` creada, ejecutá:
 
 ```powershell
 docker compose up -d --build
@@ -81,7 +75,7 @@ Dejá la computadora encendida, Docker en funcionamiento y la API disponible. Ej
 
 Con `Ctrl+C` salís de los logs sin detener el contenedor.
 
-### 6. Comprobar el resultado
+### 5. Comprobar el resultado
 
 Después de la ejecución programada, iniciá sesión en Swagger con el usuario regular y autorizá las solicitudes con el token obtenido.
 
@@ -102,7 +96,7 @@ docker compose up -d --force-recreate agent
 
 Después de probar, restaurá el horario deseado y ejecutá nuevamente ese comando.
 
-### 7. Actualizar o detener
+### 6. Actualizar o detener
 
 Después de cambiar `.env`:
 
