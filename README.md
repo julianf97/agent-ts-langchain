@@ -53,7 +53,7 @@ Reemplazá `OPENAI_API_KEY` por tu propia key y `OPENAI_MODEL` por un modelo dis
 
 Las credenciales corresponden al usuario regular del seed de la API. Si cambiaste su contraseña, usá la actual.
 
-`BILLING_BATCH_SIZE` debe ser un entero mayor que cero. `BILLING_CRON=53 14 * * *` ejecuta un lote todos los días a las **18:00, hora argentina**. Cambiá los minutos y la hora para elegir otro horario.
+`BILLING_BATCH_SIZE` debe ser un entero mayor que cero. `BILLING_CRON=00 18 * * *` ejecuta un lote todos los días a las **18:00, hora argentina**. Cambiá los minutos y la hora para elegir otro horario.
 
 Compose establece automáticamente `API_BASE_URL=http://api-agente:3000` dentro del contenedor, incluso si tu `.env` tiene otro valor. Ambos proyectos se comunican por `erp-agent-network`; el puerto interno de la API sigue siendo 3000 aunque cambies `HOST_PORT`.
 
