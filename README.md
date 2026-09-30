@@ -9,7 +9,6 @@ Necesitás Git y Docker Desktop iniciado (o Docker Engine con Docker Compose), y
 Primero configurá y levantá [api-agente](https://github.com/julianf97/api-agente) siguiendo su README. Si ya lo tenés clonado, ejecutá desde su carpeta:
 
 ```powershell
-git pull origin main
 docker compose up -d --build
 docker compose logs -f api
 ```
