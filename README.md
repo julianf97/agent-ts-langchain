@@ -14,7 +14,78 @@ Agente de facturación desarrollado con TypeScript, LangChain y OpenAI. Consulta
 
 El agente ejecuta automáticamente un lote según `BILLING_CRON`. `BILLING_BATCH_SIZE` define cuántas facturas solicita por ejecución. En cada lote inicia sesión y crea una nueva instancia del agente. Opera mediante HTTP; no se conecta directamente a PostgreSQL.
 
-## Inicio rápido
+## Inicio rápido con Docker
+
+Necesitás Git y Docker Desktop iniciado (o Docker Engine con Docker Compose). No necesitás instalar Node.js en tu computadora.
+
+### 1. Crear la red y levantar la API
+
+La API y el agente usan la red externa compartida `erp-agent-network`. Creala una sola vez:
+
+```powershell
+docker network create erp-agent-network
+```
+
+Si Docker informa que ya existe, continuá. Desde la carpeta del repositorio `api-agente`, actualizá `main`, configurá su `.env` siguiendo su README y levantá sus servicios:
+
+```powershell
+git pull origin main
+docker compose up -d --build
+docker compose logs -f api
+```
+
+Esperá a que la API termine las migraciones, el seed y el arranque. Comprobá [Swagger](http://localhost:3000/api-docs), ajustando el puerto si cambiaste `HOST_PORT`. Salí de los logs con `Ctrl+C`.
+
+### 2. Configurar el agente
+
+Desde la carpeta de este repositorio:
+
+```powershell
+git pull origin main
+Copy-Item .env.example .env
+```
+
+Si todavía no lo clonaste, ejecutá primero `git clone https://github.com/julianf97/agent-ts-langchain.git` y `cd agent-ts-langchain`. Si ya tenés `.env`, conservá tus valores y agregá las variables que falten. En Linux o macOS usá `cp .env.example .env`.
+
+Configurá tu propia `OPENAI_API_KEY`, el `OPENAI_MODEL`, las credenciales del usuario regular, el tamaño del lote y el cron. Por ejemplo, `BILLING_CRON=53 14 * * *` programa todos los días a las 14:53, hora argentina.
+
+Compose configura automáticamente `API_BASE_URL=http://api-agente:3000` dentro del contenedor. El nombre `api-agente` es el alias de la API en la red compartida. El puerto interno sigue siendo 3000 aunque cambies `HOST_PORT`. Para ejecutar el agente localmente, el valor de `.env` sigue siendo `http://localhost:3000`.
+
+### 3. Levantar y consultar los logs
+
+```powershell
+docker compose up -d --build
+docker compose logs -f agent
+```
+
+La imagen compila TypeScript y ejecuta `dist/index.js` como usuario sin privilegios. Las credenciales se cargan al iniciar el contenedor; `.env` queda excluido de la imagen.
+
+El agente espera el próximo horario del cron; **no factura inmediatamente al arrancar**. Docker Desktop, la computadora y la API deben seguir disponibles. Los dos proyectos tienen Compose separados: levantá primero la API, ya que el Compose del agente no espera automáticamente su disponibilidad.
+
+Con `Ctrl+C` salís de los logs sin detener el agente. Después de cambiar `.env`, ejecutá:
+
+```powershell
+docker compose up -d --force-recreate agent
+```
+
+Después de cambiar el código, usá `docker compose up -d --build`. Para detener el agente:
+
+```powershell
+docker compose down
+```
+
+Ejecutá una sola instancia del agente y detené cualquier proceso local de `npm start` o `npm run dev` antes de arrancarlo en Docker. `noOverlap` solo coordina los lotes dentro de un mismo proceso.
+
+Para comprobar la red:
+
+```powershell
+docker network inspect erp-agent-network
+docker compose exec agent node -e "fetch('http://api-agente:3000/').then(async r => { console.log(r.status, await r.text()); if (!r.ok) process.exitCode = 1; }).catch(e => { console.error(e.message); process.exitCode = 1; })"
+```
+
+La red debe incluir ambos contenedores y la consulta debe devolver HTTP 200. Esta comprobación no ejecuta el agente ni crea facturas. PostgreSQL permanece en la red privada del Compose de la API.
+
+## Inicio rápido sin Docker
 
 Necesitás Git, Node.js 22 o posterior, npm y una API key de OpenAI con acceso a un modelo que admita llamadas a herramientas.
 
