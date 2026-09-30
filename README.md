@@ -116,7 +116,7 @@ API_BASE_URL=http://localhost:3000
 API_EMAIL=regular@example.com
 API_PASSWORD=RegularDemo123!
 BILLING_BATCH_SIZE=5
-BILLING_CRON=53 14 * * *
+BILLING_CRON=00 18 * * *
 BILLING_TIMEZONE=America/Argentina/Buenos_Aires
 ```
 
