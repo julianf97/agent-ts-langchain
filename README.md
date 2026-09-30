@@ -109,7 +109,21 @@ docker compose up -d --force-recreate agent
 
 Después de probar, restaurá el horario deseado y ejecutá nuevamente ese comando.
 
-### 6. Actualizar o detener
+### 6. Endpoints que usa el agente
+
+En cada ejecución programada, el proceso inicia sesión y entrega el token al agente. Luego, el agente usa sus herramientas para consultar documentos y crear facturas.
+
+| Método | Endpoint | Cómo lo usa |
+| --- | --- | --- |
+| POST | `/auth/login` | Al iniciar cada lote, envía `email` y `password` desde `API_EMAIL` y `API_PASSWORD`. Obtiene el `accessToken` para autenticar las siguientes solicitudes. |
+| GET | `/documents?page={page}&limit=100` | La herramienta `list_documents` consulta hasta 100 documentos por página, comenzando por la página 1. El agente lee el contexto y las reglas de la respuesta, selecciona documentos `type: OV` y `status: pending`, y consulta las páginas siguientes cuando necesita más órdenes. |
+| POST | `/invoices` | La herramienta `create_invoice` envía `number: DEMO-FAC-OV-{documentId}` y `documentId` para crear una factura desde una OV pendiente. Procesa las órdenes una por una hasta completar el lote, agotar las candidatas o encontrar un error de creación. La API calcula los datos de la factura y cambia la orden a `invoiced`. |
+
+Las solicitudes a `/documents` y `/invoices` incluyen el encabezado `Authorization: Bearer <accessToken>`. Las rutas se agregan a `API_BASE_URL`.
+
+El cambio de estado de la orden ocurre dentro de `POST /invoices`; el agente no envía un PATCH adicional. `GET /invoices`, mencionado en la sección anterior, lo usás desde Swagger para comprobar el resultado; el agente no lo llama en el flujo actual.
+
+### 7. Actualizar o detener
 
 Después de cambiar `.env`:
 
